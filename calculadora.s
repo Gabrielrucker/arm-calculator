@@ -66,7 +66,6 @@ _start:
 	mov     r0, #1      @ fd -> stdout
 	ldr     r1, =msg @ buf -> msg
 	ldr 	r2, =len
-	mov		r2, #1
 	mov     r7, #4      @ write é syscall #4
 	svc     0x55        @ executa syscall  
 	
@@ -94,7 +93,6 @@ _start:
 
 	@@@@@
 
-	mov r0,r10 @ move o resultado final da operação para r0
 	push {r0} @ empilha o resultado
 	ldr   r3, =resultado @ carrega no r3 o endereço do buffer
 	mov r10,#0 @ zera o r10 pois deve estar zerado antes da conversão em ascii
@@ -179,10 +177,11 @@ para_ascii:
 @ converte o o vetor de caracteres inserido em ASCII para hexa para poder realizar a operação desejada
 	conv:
 		push {lr}
+		mov r10,#0
 		mov r3,#0 @ zera o registrador que guarda a posição
 		mov r6,r1 @ guarda o endereço do vetor em r6
 		mov r4,r0 @ número de bytes do vetor
-		bl conv3
+		bl conv2
 		pop {pc}
 	conv2:
 		push {lr}
@@ -239,14 +238,33 @@ para_ascii:
 
 /* fim do programa */
 fim:
-	
-	/* int write(int fd, const void *buf, size_t count) */
+
+	@ apresenta o resultado final no console
 	mov     r0, #1
-	mov		r2, r10  @ quantidade de bytes a serem mostrados na saída
-	mov     r1, r3	 @ começo da cadeia é em r3	 
-	mov     r7, #4   @ write é syscall #4
-	svc     0x055    @ executa syscall
-	
+	mov		r2, r10 
+	mov     r1, r3		 
+	mov     r7, #4
+	svc     0x055
+
+	@ escreve a mensagem de continuação para o usuário 
+	mov     r0, #1
+	ldr		r1, =msg_continua 
+	ldr     r2, =continua_len
+	mov     r7, #4 
+	svc      0x055
+
+	@ lê a opção inserida pelo usuário
+	mov     r0, #0
+	ldr     r1, =opcao
+	mov		r2, #1
+	mov     r7, #3    
+	svc     #0x55     
+
+	@ carrega a opção do usuário em r1
+	ldr r1,[r1]
+	cmp r1,#0x79 @ se for igual a 'y' vai para o começo
+	beq _start
+
 	/* exit(int status) */
 	mov     r0, #0      @ status -> 0
 	mov     r7, #1      @ exit é syscall #1
@@ -257,7 +275,12 @@ fim:
 	.ascii   "="
 	len = . - msg
 
-	/* buffers dos operandos, do operador e do resultado final */
+	@ mensagem para perguntar ao usuário se ele deseja continuar o programa
+	msg_continua:
+	.ascii	"\nContinuar(y/n) ?\n"
+	continua_len = . - msg_continua
+
+	/* buffers dos operandos, do operador, do resultado final e da opção de continuar do usuário */
 	operador:
 	.skip 128
 
@@ -268,4 +291,7 @@ fim:
 	.skip 128
 
 	resultado:
+	.skip 128
+
+	opcao:
 	.skip 128
